@@ -107,7 +107,23 @@ class DiscreteQ(nn.Module):
     return q1, q2
 
 class Value(nn.Module):
-  def __init__(self, )
+  def __init__(self, state_dim, hidden_dim = 256):
+    super(Value, self).__init__()
+    self.layers = nn.Sequential(
+      nn.Linear(state_dim, hidden_dim),
+      nn.GELU(),
+      nn.Linear(hidden_dim, hidden_dim),
+      nn.GELU(),
+      nn.Linear(hidden_dim, 1)
+    )
+  def forward(self, state):
+    value = self.layers(state)
+    return value
 
 class SAC(nn.Module):
-  def __init__(self, action_num, hidden_dim = 256, stack_length = 4)
+  def __init__(self, action_dim, hidden_dim = 256, stack_length = 4):
+    super(SAC, self).__init__()
+
+class DiscreteSAC(nn.Module):
+  def __init__(self, action_num, hidden_dim = 256, stack_length = 4):
+    super(SAC, self).__init__()
