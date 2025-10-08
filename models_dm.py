@@ -121,9 +121,13 @@ class Value(nn.Module):
     return value
 
 class SAC(nn.Module):
-  def __init__(self, action_dim, hidden_dim = 256, stack_length = 4):
+  def __init__(self, state_dim, action_dim, hidden_dim = 256, stack_length = 4):
     super(SAC, self).__init__()
+    self.Q = Q(state_dim, action_dim, hidden_dim)
+    self.V = Value(state_dim, hidden_dim)
 
 class DiscreteSAC(nn.Module):
   def __init__(self, action_num, hidden_dim = 256, stack_length = 4):
-    super(SAC, self).__init__()
+    super(DiscreteSAC, self).__init__()
+    self.Q = DiscreteQ(state_dim, action_num, hidden_dim)
+    self.V = Value(state_dim, hidden_dim)
