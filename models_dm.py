@@ -38,21 +38,21 @@ class PolicyNet(nn.Module):
     return action, log_prob
 
 class DiscretePolicyNet(nn.Module):
-  def __init__(self, state_dim, action_dim, hidden_dim = 256):
+  def __init__(self, state_dim, action_num, hidden_dim = 256):
     super(DiscretePolicyNet, self).__init__()
     self.layers = nn.Sequential(
       nn.Linear(state_dim, hidden_dim),
       nn.GELU(),
       nn.Linear(hidden_dim, hidden_dim),
       nn.GELU(),
-      nn.Linear(hidden_dim, action_dim)
+      nn.Linear(hidden_dim, action_num)
     )
   def forward(self, state):
     logits = self.layers(state)
     return logits
   def sample(self, state):
-    logits = self.forward(state) # logits.shape = (batch, action_dim)
-    probs = F.softmax(logits, dim = -1) # probs.shape = (batch, action_dim)
+    logits = self.forward(state) # logits.shape = (batch, action_num)
+    probs = F.softmax(logits, dim = -1) # probs.shape = (batch, action_num)
     dist = torch.distributions.Categorical(probs)
     action = dist.sample() # action.shape = (batch,)
     log_prob = dist.log_prob(action).unsqueeze(dim = -1) # log_prob.shape = (batch, 1)
@@ -80,6 +80,34 @@ class Q(nn.Module):
     q1 = self.q1_layers(sa)
     q2 = self.q2_layers(sa)
     return q1, q2
+
+class DiscreteQ(nn.Module):
+  def __init__(self, state_dim, action_num, hidden_dim = 256):
+    super(DiscreteQ, self).__init__()
+    self.q1_layers = nn.Sequential(
+      nn.Linear(state_dim + action_num, hidden_dim),
+      nn.GELU(),
+      nn.Linear(hidden_dim, hidden_dim),
+      nn.GELU(),
+      nn.Linear(hidden_dim, 1)
+    )
+    self.q2_layers = nn.Sequential(
+      nn.Linear(state_dim + action_num, hidden_dim),
+      nn.GELU(),
+      nn.Linear(hidden_dim, hidden_dim),
+      nn.GELU(),
+      nn.Linear(hidden_dim, 1)
+    )
+    self.action_num = action_num
+  def forward(self, state, action):
+    action = F.one_hot(action, action_num) # action.shape = (batch, action_num)
+    sa = torch.cat([state, action], dim = -1) # sa.shape = (batch, state_dim + action_num)
+    q1 = self.q1_layers(sa)
+    q2 = self.q2_layers(sa)
+    return q1, q2
+
+class Value(nn.Module):
+  def __init__(self, )
 
 class SAC(nn.Module):
   def __init__(self, action_num, hidden_dim = 256, stack_length = 4)
