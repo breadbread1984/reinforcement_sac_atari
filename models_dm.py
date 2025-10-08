@@ -29,7 +29,7 @@ class PolicyNet(nn.Module):
     normal = torch.distributions.Normal(mean, std) # normal.shape = (batch, action_dim)
     x_t = normal.rsample() # x_t.shape = (batch, action_dim)
     action = torch.tanh(x_t) # action.shape = (batch, action_dim), tanh make sure that the action is in [-1, 1]
-    # P(normal(mean, std)) d normal(mean, std) = P(tanh(normal(mean, std))) d tanh(normal(mean, std))
+    # P(tanh(normal(mean, std))) d tanh(normal(mean, std)) = P(normal(mean, std)) d normal(mean, std)
     # P(tanh(normal(mean, std))) = P(normal(mean, std)) | det(d / dx tanh(x)) |^{-1}
     # P(tanh(normal(mean, std))) = P(normal(mean, std)) 1 / sum_i {1-tanh^2(x_i)}
     # log P(tanh(normal(mean, std))) = log P(normal(mean, std)) - log sum_i {1 - tanh^2(x_i)}
@@ -57,3 +57,29 @@ class DiscretePolicyNet(nn.Module):
     action = dist.sample() # action.shape = (batch,)
     log_prob = dist.log_prob(action).unsqueeze(dim = -1) # log_prob.shape = (batch, 1)
     return action, log_prob
+
+class Q(nn.Module):
+  def __init__(self, state_dim, action_dim, hidden_dim = 256):
+    super(Q, self).__init__()
+    self.q1_layers = nn.Sequential(
+      nn.Linear(state_dim + action_dim, hidden_dim),
+      nn.GELU(),
+      nn.Linear(hidden_dim, hidden_dim),
+      nn.GELU(),
+      nn.Linear(hidden_dim, 1)
+    )
+    self.q2_layers = nn.Sequential(
+      nn.Linear(state_dim + action_dim, hidden_dim),
+      nn.GELU(),
+      nn.Linear(hidden_dim, hidden_dim),
+      nn.GELU(),
+      nn.Linear(hidden_dim, 1)
+    )
+  def forward(self, state, action):
+    sa = torch.cat([state, action], dim = -1) # sa.shape = (batch, state_dim + action_dim)
+    q1 = self.q1_layers(sa)
+    q2 = self.q2_layers(sa)
+    return q1, q2
+
+class SAC(nn.Module):
+  def __init__(self, action_num, hidden_dim = 256, stack_length = 4)
