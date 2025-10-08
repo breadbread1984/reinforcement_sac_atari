@@ -19,10 +19,10 @@ class PolicyNet(nn.Module):
     self.LOG_STD_MIN = -20
     self.LOG_STD_MAX = 2
   def forward(self, state):
-    hidden = self.backbone(state)
-    mean = self.mean_head(hidden)
+    hidden = self.backbone(state) # hidden.shape = (batch, hidden_dim)
+    mean = self.mean_head(hidden) # mean.shape = (batch, action_dim)
     log_std = torch.clamp(self.log_std_head(hidden), self.LOG_STD_MIN, self.LOG_STD_MAX)
-    std = torch.exp(log_std)
+    std = torch.exp(log_std) # std.shape = (batch, action_dim)
     return mean, std
   def sample(self, state):
     mean, std = self.forward(state)
@@ -54,7 +54,7 @@ class DiscretePolicyNet(nn.Module):
     logits = self.forward(state) # logits.shape = (batch, action_num)
     probs = F.softmax(logits, dim = -1) # probs.shape = (batch, action_num)
     dist = torch.distributions.Categorical(probs)
-    action = dist.sample() # action.shape = (batch,)
+    action = dist.sample() # action.shape = (batch)
     log_prob = dist.log_prob(action).unsqueeze(dim = -1) # log_prob.shape = (batch, 1)
     return action, log_prob
 
@@ -123,11 +123,19 @@ class Value(nn.Module):
 class SAC(nn.Module):
   def __init__(self, state_dim, action_dim, hidden_dim = 256, stack_length = 4):
     super(SAC, self).__init__()
+    self.policy = PolicyNet(state_dim, action_dim, hidden_dim)
     self.Q = Q(state_dim, action_dim, hidden_dim)
     self.V = Value(state_dim, hidden_dim)
+  def act(self, x):
+    action, log_prob = self.policy.sample(x) # action.shape = (batch, action_dim) log_prob = (batch, 1)
+    
 
 class DiscreteSAC(nn.Module):
-  def __init__(self, action_num, hidden_dim = 256, stack_length = 4):
+  def __init__(self, state_dim, action_num, hidden_dim = 256, stack_length = 4):
     super(DiscreteSAC, self).__init__()
+    self.policy = DiscretePolicyNet(state_dim, action_num, hidden_dim)
     self.Q = DiscreteQ(state_dim, action_num, hidden_dim)
     self.V = Value(state_dim, hidden_dim)
+  def act(self, x):
+    action, log_prob = self.policy.sample(x) # action.shape = (batch,) log_prob = (batch, 1)
+    
