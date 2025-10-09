@@ -139,8 +139,8 @@ class DiscreteQ(nn.Module):
     encoding = self.encoding(states)
     action = F.one_hot(actions, self.action_num) # action.shape = (batch, action_num)
     sa = torch.cat([encoding, action], dim = -1) # sa.shape = (batch, hidden_dim + action_num)
-    q1 = self.q1_head(sa)
-    q2 = self.q2_head(sa)
+    q1 = self.q1_head(sa) # q1.shape = (batch, 1)
+    q2 = self.q2_head(sa) # q2.shape = (batch, 1)
     return q1, q2
 
 class Value(nn.Module):
@@ -198,8 +198,8 @@ class DiscreteSAC(nn.Module):
     self.policy = DiscretePolicyNet(action_num, hidden_dim, stack_length)
     self.Q = DiscreteQ(action_num, hidden_dim, stack_length)
     self.V = Value(hidden_dim, stack_length)
-  def act(self, x):
-    action, log_prob = self.policy.sample(x) # action.shape = (batch,) log_prob = (batch, 1)
+  def act(self, states):
+    action, log_prob = self.policy.sample(states) # action.shape = (batch,) log_prob = (batch, 1)
     return action.detach(), log_prob.detach()
   def pred_values(self, states):
     return self.V(states)
