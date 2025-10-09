@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 from absl import flags, app
+from os.path import exists, join
 import gymnasium as gym
 from gymnasium.vector import SyncVectorEnv
 from gymnasium.wrappers import GrayscaleObservation
