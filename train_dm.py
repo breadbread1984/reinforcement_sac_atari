@@ -75,7 +75,7 @@ def main(unused_argv):
         obs = new_obs
       # 2) train with replay buffer
       trainset = np.random.choice(replay_buffer, size = 100, replace = True)
-      train_pbar = tqdm(trainset)
+      train_pbar = tqdm(trainset, desc = "train", leave = False)
       for o, a, no, r, d, lp in train_pbar:
         states = torch.from_numpy(o).to(next(sac.parameters()).device)
         actions = torch.from_numpy(a).to(next(sac.parameters()).device)
