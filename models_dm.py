@@ -33,14 +33,19 @@ class PolicyNet(nn.Module):
     mean, std = self.forward(states)
     normal = torch.distributions.Normal(mean, std) # normal.shape = (batch, action_dim)
     x_t = normal.rsample() # x_t.shape = (batch, action_dim)
-    action = torch.tanh(x_t) # action.shape = (batch, action_dim), tanh make sure that the action is in [-1, 1]
+    actions = torch.tanh(x_t) # action.shape = (batch, action_dim), tanh make sure that the action is in [-1, 1]
+    return actions
+  def logprobs(self, states, actions):
+    mean, std = self.forward(states)
+    normal = torch.distributions.Normal(mean, std) # normal.shape = (batch, action_dim)
+    x_t = torch.atanh(actions)
     # P(tanh(normal(mean, std))) d tanh(normal(mean, std)) = P(normal(mean, std)) d normal(mean, std)
     # P(tanh(normal(mean, std))) = P(normal(mean, std)) | det(d / dx tanh(x)) |^{-1}
     # P(tanh(normal(mean, std))) = P(normal(mean, std)) 1 / sum_i {1-tanh^2(x_i)}
     # log P(tanh(normal(mean, std))) = log P(normal(mean, std)) - log sum_i {1 - tanh^2(x_i)}
-    log_prob = normal.log_prob(x_t) - torch.log(1 - action.pow(2) + 1e-6) # log_prob.shape = (batch, action_dim)
-    log_prob = log_prob.sum(1, keepdim = True) # log_prob.shape = (batch, 1)
-    return action, log_prob
+    logprobs = normal.log_prob(x_t) - torch.log(1 - actions.pow(2) + 1e-6) # log_prob.shape = (batch, action_dim)
+    logprobs = logprobs.sum(1, keepdim = True) # log_prob.shape = (batch, 1)
+    return logprobs
 
 class DiscretePolicyNet(nn.Module):
   def __init__(self, action_num, hidden_dim = 256, stack_length = 4):
@@ -66,9 +71,13 @@ class DiscretePolicyNet(nn.Module):
   def sample(self, states):
     probs = self.forward(states) # probs.shape = (batch, action_num)
     dist = torch.distributions.Categorical(probs)
-    action = dist.sample() # action.shape = (batch)
-    log_prob = dist.log_prob(action).unsqueeze(dim = -1) # log_prob.shape = (batch, 1)
-    return action, log_prob
+    actions = dist.sample() # action.shape = (batch)
+    return action
+  def logprobs(self, states, actions):
+    probs = self.forward(states) # probs.shape = (batch, action_num)
+    dist = torch.distributions.Categorical(probs)
+    logprobs = dist.log_prob(actions).unsqueeze(dim = -1) # logprob.shape = (batch, 1)
+    return logprobs
 
 class Q(nn.Module):
   def __init__(self, action_dim, hidden_dim = 256, stack_length = 4):
@@ -176,8 +185,8 @@ class SAC(nn.Module):
     self.Q = Q(action_dim, hidden_dim, stack_length)
     self.V = Value(hidden_dim, stack_length)
   def act(self, states):
-    actions, log_probs = self.policy.sample(states) # action.shape = (batch, action_dim) log_prob = (batch, 1)
-    return actions.detach(), log_probs.detach()
+    actions = self.policy.sample(states) # action.shape = (batch, action_dim) log_prob = (batch, 1)
+    return actions.detach()
   def pred_values(self, states):
     return self.V(states)
   def get_values(self, states, actions, log_probs, alpha = 0.2):
@@ -191,6 +200,8 @@ class SAC(nn.Module):
     # new_states.shape = (batch, stack_length, h, w) rewards.shape = (batch) dones.shape = (batch)
     vs = rewards + gamma * torch.where(dones > 0.5, torch.zeros_like(rewards), torch.ones_like(rewards)) * self.V(new_states)
     return vs.detach()
+  def logprobs(self, states, actions):
+    return self.policy.logprobs(states, actions)
 
 class DiscreteSAC(nn.Module):
   def __init__(self, action_num, hidden_dim = 256, stack_length = 4):
@@ -199,8 +210,8 @@ class DiscreteSAC(nn.Module):
     self.Q = DiscreteQ(action_num, hidden_dim, stack_length)
     self.V = Value(hidden_dim, stack_length)
   def act(self, states):
-    action, log_prob = self.policy.sample(states) # action.shape = (batch,) log_prob = (batch, 1)
-    return action.detach(), log_prob.detach()
+    action = self.policy.sample(states) # action.shape = (batch,) log_prob = (batch, 1)
+    return action.detach()
   def pred_values(self, states):
     return self.V(states)
   def get_values(self, states, actions, log_probs, alpha = 0.1):
@@ -214,3 +225,5 @@ class DiscreteSAC(nn.Module):
     # new_states.shape = (batch, stack_length, h, w) rewrads.shape = (batch,) dones.shape = (batch)
     vs = rewards + gamma * torch.where(dones > 0.5, torch.zeros_like(rewards), torch.ones_like(rewards)) * self.V(new_states)
     return vs.detach()
+  def logprobs(self, states, actions):
+    return self.policy.logprobs(states, actions)

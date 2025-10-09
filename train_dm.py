@@ -67,30 +67,30 @@ def main(unused_argv):
       rollout_pbar = tqdm(range(FLAGS.traj_length), desc = "rollout", leave = False)
       for _ in rollout_pbar:
         inputs = torch.from_numpy(obs).to(next(sac.parameters()).device)
-        actions, logprobs = sac.act(inputs) # actions.shape = (batch,) logprobs.shape = (batch, 1)
-        actions, logprobs = actions.cpu().numpy(), logprobs.cpu().numpy()
+        actions = sac.act(inputs) # actions.shape = (batch,)
+        actions = actions.cpu().numpy()
         new_obs, rewards, terminates, truncates, infos = envs.step(actions)
         new_obs = np.stack([preprocess(ob) for ob in new_obs], axis = 0).astype(np.float32)
-        replay_buffer.append((obs, actions, new_obs, rewards, terminates, logprobs))
+        replay_buffer.append((obs, actions, new_obs, rewards, terminates))
         if len(replay_buffer) > 1000000: replay_buffer = replay_buffer[-1000000:]
         obs = new_obs
       # 2) train with replay buffer
       trainset = random.choices(replay_buffer, k = 100)
       train_pbar = tqdm(trainset, desc = "train", leave = False)
-      for o, a, no, r, d, lp in train_pbar:
+      for o, a, no, r, d in train_pbar:
         states = torch.from_numpy(o).to(next(sac.parameters()).device)
         actions = torch.from_numpy(a).to(next(sac.parameters()).device)
         new_states = torch.from_numpy(no).to(next(sac.parameters()).device)
         rewards = torch.from_numpy(r).to(next(sac.parameters()).device)
         dones = torch.from_numpy(d).to(next(sac.parameters()).device)
-        logprobs = torch.from_numpy(lp).to(next(sac.parameters()).device)
 
+        logprobs = sac.logprobs(states, actions)
         pred_q1, pred_q2 = sac.pred_qs(states, actions)
         true_q = sac.get_qs(new_states, rewards, dones, FLAGS.gamma)
         pred_v = sac.pred_values(states)
         true_v = sac.get_values(states, actions, logprobs)
 
-        loss = - pred_q + 0.5 * (criterion(pred_q1, true_q) + criterion(pred_q2, true_q)) + criterion(pred_v, true_v)
+        loss = - (torch.minimum(pred_q1, pred_q2) - 0.1 * logprobs) + 0.5 * (criterion(pred_q1, true_q) + criterion(pred_q2, true_q)) + criterion(pred_v, true_v)
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
