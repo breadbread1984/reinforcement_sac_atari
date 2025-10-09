@@ -82,7 +82,7 @@ def main(unused_argv):
         actions = torch.from_numpy(a).to(next(sac.parameters()).device)
         new_states = torch.from_numpy(no).to(next(sac.parameters()).device)
         rewards = torch.from_numpy(r).to(next(sac.parameters()).device)
-        dones = torch.from_numpy(d).to(next(sac.paramters()).device)
+        dones = torch.from_numpy(d).to(next(sac.parameters()).device)
         logprobs = torch.from_numpy(lp).to(next(sac.parameters()).device)
 
         pred_q1, pred_q2 = sac.pred_qs(states, actions)
