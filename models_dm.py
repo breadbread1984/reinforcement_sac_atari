@@ -7,11 +7,16 @@ from torch.nn.functional as F
 class PolicyNet(nn.Module):
   def __init__(self, state_dim, action_dim, hidden_dim = 256):
     super(PolicyNet, self).__init__()
-    self.backbone = nn.Sequential(
-      nn.Linear(state_dim, hidden_dim),
+    self.encoding = nn.Sequential(
+      nn.Conv2d(stack_length, hidden_dim, kernel_size = (3,3), stride = (2,2), padding = 1),
       nn.GELU(),
-      nn.Linear(hidden_dim, hidden_dim),
-      nn.GELU()
+      nn.Conv2d(hidden_dim, hidden_dim, kernel_size = (3,3), stride = (2,2), padding = 1),
+      nn.GELU(),
+      nn.Conv2d(hidden_dim, hidden_dim, kernel_size = (3,3), stride = (2,2), padding = 1),
+      nn.GELU(),
+      nn.Conv2d(hidden_dim, hidden_dim, kernel_size = (3,3), stride = (2,2), padding = 1),
+      nn.Flatten(),
+      nn.Linear(hidden_dim * 14 * 14, hidden_dim)
     )
     self.mean_head = nn.Linear(hidden_dim, action_dim)
     # std must be over 0, therefore use network to predict log_std
@@ -19,9 +24,9 @@ class PolicyNet(nn.Module):
     self.LOG_STD_MIN = -20
     self.LOG_STD_MAX = 2
   def forward(self, state):
-    hidden = self.backbone(state) # hidden.shape = (batch, hidden_dim)
-    mean = self.mean_head(hidden) # mean.shape = (batch, action_dim)
-    log_std = torch.clamp(self.log_std_head(hidden), self.LOG_STD_MIN, self.LOG_STD_MAX)
+    encoding = self.encoding(state) # hidden.shape = (batch, hidden_dim)
+    mean = self.mean_head(encoding) # mean.shape = (batch, action_dim)
+    log_std = torch.clamp(self.log_std_head(encoding), self.LOG_STD_MIN, self.LOG_STD_MAX)
     std = torch.exp(log_std) # std.shape = (batch, action_dim)
     return mean, std
   def sample(self, state):
@@ -40,19 +45,26 @@ class PolicyNet(nn.Module):
 class DiscretePolicyNet(nn.Module):
   def __init__(self, state_dim, action_num, hidden_dim = 256):
     super(DiscretePolicyNet, self).__init__()
-    self.layers = nn.Sequential(
-      nn.Linear(state_dim, hidden_dim),
+    self.encoding = nn.Sequential(
+      nn.Conv2d(stack_length, hidden_dim, kernel_size = (3,3), stride = (2,2), padding = 1),
       nn.GELU(),
-      nn.Linear(hidden_dim, hidden_dim),
+      nn.Conv2d(hidden_dim, hidden_dim, kernel_size = (3,3), stride = (2,2), padding = 1),
       nn.GELU(),
-      nn.Linear(hidden_dim, action_num)
+      nn.Conv2d(hidden_dim, hidden_dim, kernel_size = (3,3), stride = (2,2), padding = 1),
+      nn.GELU(),
+      nn.Conv2d(hidden_dim, hidden_dim, kernel_size = (3,3), stride = (2,2), padding = 1),
+      nn.Flatten(),
+      nn.Linear(hidden_dim * 14 * 14, hidden_dim)
+    )
+    self.pred_head = nn.Sequential(
+      nn.Linear(hidden_dim, action_num),
+      nn.Softmax(dim = -1)
     )
   def forward(self, state):
-    logits = self.layers(state)
-    return logits
+    encoding = self.encoding(state)
+    return self.pred_head(encoding)
   def sample(self, state):
-    logits = self.forward(state) # logits.shape = (batch, action_num)
-    probs = F.softmax(logits, dim = -1) # probs.shape = (batch, action_num)
+    probs = self.forward(state) # probs.shape = (batch, action_num)
     dist = torch.distributions.Categorical(probs)
     action = dist.sample() # action.shape = (batch)
     log_prob = dist.log_prob(action).unsqueeze(dim = -1) # log_prob.shape = (batch, 1)
@@ -61,6 +73,17 @@ class DiscretePolicyNet(nn.Module):
 class Q(nn.Module):
   def __init__(self, state_dim, action_dim, hidden_dim = 256):
     super(Q, self).__init__()
+    self.encoding = nn.Sequential(
+      nn.Conv2d(stack_length, hidden_dim, kernel_size = (3,3), stride = (2,2), padding = 1),
+      nn.GELU(),
+      nn.Conv2d(hidden_dim, hidden_dim, kernel_size = (3,3), stride = (2,2), padding = 1),
+      nn.GELU(),
+      nn.Conv2d(hidden_dim, hidden_dim, kernel_size = (3,3), stride = (2,2), padding = 1),
+      nn.GELU(),
+      nn.Conv2d(hidden_dim, hidden_dim, kernel_size = (3,3), stride = (2,2), padding = 1),
+      nn.Flatten(),
+      nn.Linear(hidden_dim * 14 * 14, hidden_dim)
+    )
     self.q1_layers = nn.Sequential(
       nn.Linear(state_dim + action_dim, hidden_dim),
       nn.GELU(),
@@ -76,7 +99,8 @@ class Q(nn.Module):
       nn.Linear(hidden_dim, 1)
     )
   def forward(self, state, action):
-    sa = torch.cat([state, action], dim = -1) # sa.shape = (batch, state_dim + action_dim)
+    encoding = self.encoding(state)
+    sa = torch.cat([encoding, action], dim = -1) # sa.shape = (batch, state_dim + action_dim)
     q1 = self.q1_layers(sa)
     q2 = self.q2_layers(sa)
     return q1, q2
@@ -84,6 +108,17 @@ class Q(nn.Module):
 class DiscreteQ(nn.Module):
   def __init__(self, state_dim, action_num, hidden_dim = 256):
     super(DiscreteQ, self).__init__()
+    self.encoding = nn.Sequential(
+      nn.Conv2d(stack_length, hidden_dim, kernel_size = (3,3), stride = (2,2), padding = 1),
+      nn.GELU(),
+      nn.Conv2d(hidden_dim, hidden_dim, kernel_size = (3,3), stride = (2,2), padding = 1),
+      nn.GELU(),
+      nn.Conv2d(hidden_dim, hidden_dim, kernel_size = (3,3), stride = (2,2), padding = 1),
+      nn.GELU(),
+      nn.Conv2d(hidden_dim, hidden_dim, kernel_size = (3,3), stride = (2,2), padding = 1),
+      nn.Flatten(),
+      nn.Linear(hidden_dim * 14 * 14, hidden_dim)
+    )
     self.q1_layers = nn.Sequential(
       nn.Linear(state_dim + action_num, hidden_dim),
       nn.GELU(),
@@ -100,8 +135,9 @@ class DiscreteQ(nn.Module):
     )
     self.action_num = action_num
   def forward(self, state, action):
+    encoding = self.encoding(state)
     action = F.one_hot(action, action_num) # action.shape = (batch, action_num)
-    sa = torch.cat([state, action], dim = -1) # sa.shape = (batch, state_dim + action_num)
+    sa = torch.cat([encoding, action], dim = -1) # sa.shape = (batch, state_dim + action_num)
     q1 = self.q1_layers(sa)
     q2 = self.q2_layers(sa)
     return q1, q2
@@ -133,6 +169,9 @@ class SAC(nn.Module):
     return self.V(states)
   def pred_qs(self, states, actions):
     return self.Q(states, actions)
+  def get_qs(self, states, rewards, dones):
+    # states.shape = (batch, )
+    return rewards + ()
 
 class DiscreteSAC(nn.Module):
   def __init__(self, state_dim, action_num, hidden_dim = 256, stack_length = 4):
