@@ -2,7 +2,7 @@
 
 import torch
 from torch import nn
-from torch.nn.functional as F
+import torch.nn.functional as F
 
 class PolicyNet(nn.Module):
   def __init__(self, action_dim, hidden_dim = 256, stack_length = 4):
