@@ -23,14 +23,14 @@ class PolicyNet(nn.Module):
     self.log_std_head = nn.Linear(hidden_dim, action_dim)
     self.LOG_STD_MIN = -20
     self.LOG_STD_MAX = 2
-  def forward(self, state):
-    encoding = self.encoding(state) # hidden.shape = (batch, hidden_dim)
+  def forward(self, states):
+    encoding = self.encoding(states) # hidden.shape = (batch, hidden_dim)
     mean = self.mean_head(encoding) # mean.shape = (batch, action_dim)
     log_std = torch.clamp(self.log_std_head(encoding), self.LOG_STD_MIN, self.LOG_STD_MAX)
     std = torch.exp(log_std) # std.shape = (batch, action_dim)
     return mean, std
-  def sample(self, state):
-    mean, std = self.forward(state)
+  def sample(self, states):
+    mean, std = self.forward(states)
     normal = torch.distributions.Normal(mean, std) # normal.shape = (batch, action_dim)
     x_t = normal.rsample() # x_t.shape = (batch, action_dim)
     action = torch.tanh(x_t) # action.shape = (batch, action_dim), tanh make sure that the action is in [-1, 1]
@@ -60,11 +60,11 @@ class DiscretePolicyNet(nn.Module):
       nn.Linear(hidden_dim, action_num),
       nn.Softmax(dim = -1)
     )
-  def forward(self, state):
-    encoding = self.encoding(state)
+  def forward(self, states):
+    encoding = self.encoding(states)
     return self.pred_head(encoding)
-  def sample(self, state):
-    probs = self.forward(state) # probs.shape = (batch, action_num)
+  def sample(self, states):
+    probs = self.forward(states) # probs.shape = (batch, action_num)
     dist = torch.distributions.Categorical(probs)
     action = dist.sample() # action.shape = (batch)
     log_prob = dist.log_prob(action).unsqueeze(dim = -1) # log_prob.shape = (batch, 1)
