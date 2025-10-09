@@ -58,12 +58,13 @@ def main(unused_argv):
     scheduler = ckpt['scheduler']
     replay_buffer = ckpt['replay_buffer']
   for epoch in tqdm(range(FLAGS.epochs), desc = "epoch"):
-    step_pbar = tqdm(range(FLAGS.steps), desc = "feed to replay buffer", leave = False)
+    step_pbar = tqdm(range(FLAGS.steps), desc = "step", leave = False)
     for step in step_pbar:
       obs, info = envs.reset()
       obs = np.stack([preprocess(ob) for ob in obs], axis = 0).astype(np.float32)
       # 1) sample 256 steps from a trajectory
-      for step in range(FLAGS.traj_length):
+      rollout_pbar = tqdm(range(FLAGS.traj_length), desc = "rollout", leave = False)
+      for _ in rollout_pbar:
         inputs = torch.from_numpy(obs).to(next(sac.parameters()).device)
         actions, logprobs = sac.act(inputs) # actions.shape = (batch,) logprobs.shape = (batch, 1)
         actions, logprobs = actions.cpu().numpy(), logprobs.cpu().numpy()
@@ -74,7 +75,8 @@ def main(unused_argv):
         obs = new_obs
       # 2) train with replay buffer
       trainset = np.random.choice(replay_buffer, size = 100, replace = True)
-      for o, a, no, r, d, lp in trainset:
+      train_pbar = tqdm(trainset)
+      for o, a, no, r, d, lp in train_pbar:
         states = torch.from_numpy(o).to(next(sac.parameters()).device)
         actions = torch.from_numpy(a).to(next(sac.parameters()).device)
         new_states = torch.from_numpy(no).to(next(sac.parameters()).device)
@@ -91,9 +93,9 @@ def main(unused_argv):
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-      step_pbar.set_postfix(loss = loss.detach().cpu().numpy())
-      tb_writer.add_scalar('loss', loss.detach().cpu().numpy(), global_steps)
-      global_steps += 1
+        train_pbar.set_postfix(loss = loss.detach().cpu().numpy())
+        tb_writer.add_scalar('loss', loss.detach().cpu().numpy(), global_steps)
+        global_steps += 1
     scheduler.step()
     ckpt = {
       'global_steps': global_steps,
