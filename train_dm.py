@@ -44,7 +44,7 @@ def main(unused_argv):
     'box': 'ALE/Boxing-v5'
   }[FLAGS.game]
   envs = SyncVectorEnv([lambda: FrameStackObservation(GrayscaleObservation(gym.make(env_id)), FLAGS.stack_length) for _ in range(FLAGS.batch)])
-  sac = DiscreteSAC(action_num = envs.single_action_space.n, stack_length = FLAGS.stack_length)
+  sac = DiscreteSAC(action_num = envs.single_action_space.n, stack_length = FLAGS.stack_length).to(FLAGS.device)
   criterion = nn.MSELoss().to(FLAGS.device)
   optimizer = Adam(sac.parameters(), lr = FLAGS.lr)
   scheduler = CosineAnnealingWarmRestarts(optimizer, T_0 = 5, T_mult = 2)
