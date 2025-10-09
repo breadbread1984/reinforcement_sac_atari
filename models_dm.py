@@ -183,7 +183,7 @@ class SAC(nn.Module):
   def get_values(self, states, actions, log_probs, alpha = 0.2):
     # states.shape = (batch, stack_length, h, w) actions.shape = (batch, action_dim) log_probs = (batch, 1)
     q1, q2 = self.Q(states, actions) # q1.shape = (batch, 1) q2.shape = (batch, 1)
-    vs = torch.minimum(q1,q2) - log_probs
+    vs = torch.minimum(q1,q2) - alpha * log_probs
     return vs.detach()
   def pred_qs(self, states, actions):
     return self.Q(states, actions)
@@ -206,7 +206,7 @@ class DiscreteSAC(nn.Module):
   def get_values(self, states, actions, log_probs, alpha = 0.1):
     # states.shape = (batch, stack_length, h, w) actions.shape = (batch,) log_probs = (batch, 1)
     q1, q2 = self.Q(states, actions) # q1.shape = (batch, 1) q2.shape = (batch, 1)
-    vs = torch.minimum(q1, q2) - log_probs
+    vs = torch.minimum(q1, q2) - alpha * log_probs
     return vs.detach()
   def pred_qs(self, states, actions):
     return self.Q(states, actions)
