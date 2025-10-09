@@ -82,12 +82,12 @@ def main(unused_argv):
       dones = torch.from_numpy(d).to(next(sac.paramters()).device)
       logprobs = torch.from_numpy(lp).to(next(sac.parameters()).device)
 
-      pred_q = sac.pred_qs(states, actions)
+      pred_q1, pred_q2 = sac.pred_qs(states, actions)
       true_q = sac.get_qs(new_states, rewards, dones, FLAGS.gamma)
       pred_v = sac.pred_values(states)
       true_v = sac.get_values(states, actions, logprobs)
 
-      loss = - pred_q + criterion(pred_q, true_q) + criterion(pred_v, true_v)
+      loss = - pred_q + 0.5 * (criterion(pred_q1, true_q) + criterion(pred_q2, true_q)) + criterion(pred_v, true_v)
       optimizer.zero_grad()
       loss.backward()
       optimizer.step()
