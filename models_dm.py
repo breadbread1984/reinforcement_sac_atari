@@ -72,7 +72,7 @@ class DiscretePolicyNet(nn.Module):
     probs = self.forward(states) # probs.shape = (batch, action_num)
     dist = torch.distributions.Categorical(probs)
     actions = dist.sample() # action.shape = (batch)
-    return action
+    return actions
   def logprobs(self, states, actions):
     probs = self.forward(states) # probs.shape = (batch, action_num)
     dist = torch.distributions.Categorical(probs)
