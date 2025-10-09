@@ -126,9 +126,13 @@ class SAC(nn.Module):
     self.policy = PolicyNet(state_dim, action_dim, hidden_dim)
     self.Q = Q(state_dim, action_dim, hidden_dim)
     self.V = Value(state_dim, hidden_dim)
-  def act(self, x):
-    action, log_prob = self.policy.sample(x) # action.shape = (batch, action_dim) log_prob = (batch, 1)
-    
+  def act(self, states):
+    actions, log_probs = self.policy.sample(states) # action.shape = (batch, action_dim) log_prob = (batch, 1)
+    return actions.detach(), log_probs.detach()
+  def pred_values(self, states):
+    return self.V(states)
+  def pred_qs(self, states, actions):
+    return self.Q(states, actions)
 
 class DiscreteSAC(nn.Module):
   def __init__(self, state_dim, action_num, hidden_dim = 256, stack_length = 4):
@@ -138,4 +142,8 @@ class DiscreteSAC(nn.Module):
     self.V = Value(state_dim, hidden_dim)
   def act(self, x):
     action, log_prob = self.policy.sample(x) # action.shape = (batch,) log_prob = (batch, 1)
-    
+    return action.detach(), log_prob.detach()
+  def pred_values(self, states):
+    return self.V(states)
+  def pred_qs(self, states, actions):
+    return self.Q(states, actions)
