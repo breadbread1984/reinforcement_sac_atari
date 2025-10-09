@@ -101,7 +101,7 @@ def main(unused_argv):
     scheduler.step()
     ckpt = {
       'global_steps': global_steps,
-      'state_dict': ppo.state_dict(),
+      'state_dict': sac.state_dict(),
       'optimizer': optimizer.state_dict(),
       'scheduler': scheduler
     }
