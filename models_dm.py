@@ -212,5 +212,5 @@ class DiscreteSAC(nn.Module):
     return self.Q(states, actions)
   def get_qs(self, new_states, rewards, dones, gamma):
     # new_states.shape = (batch, stack_length, h, w) rewrads.shape = (batch,) dones.shape = (batch)
-    vs = rewards + gamma * torch.where(dones > 0.5, torch.zeros_like(rewards), torch.ones_like(rewrads)) * self.V(new_states)
+    vs = rewards + gamma * torch.where(dones > 0.5, torch.zeros_like(rewards), torch.ones_like(rewards)) * self.V(new_states)
     return vs.detach()
