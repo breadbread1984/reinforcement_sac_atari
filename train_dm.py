@@ -30,6 +30,7 @@ def add_options():
   flags.DEFINE_integer('batch', default = 32, help = 'number of trajectories collected parallely')
   flags.DEFINE_integer('traj_length', default = 256, help = 'maximum length of a trajectory')
   flags.DEFINE_integer('epochs', default = 300, help = 'number of epoch')
+  flags.DEFINE_integer('replay_buffer_size', default = 10000, help = 'replay buffer size')
   flags.DEFINE_float('gamma', default = 0.95, help = 'gamma value')
   flags.DEFINE_enum('device', default = 'cuda', enum_values = {'cpu', 'cuda'}, help = 'device to use')
 
@@ -72,7 +73,7 @@ def main(unused_argv):
         new_obs, rewards, terminates, truncates, infos = envs.step(actions)
         new_obs = np.stack([preprocess(ob) for ob in new_obs], axis = 0).astype(np.float32)
         replay_buffer.append((obs, actions, new_obs, rewards.astype(np.float32), terminates))
-        if len(replay_buffer) > 1000000: replay_buffer = replay_buffer[-1000000:]
+        if len(replay_buffer) > FLAGS.replay_buffer_size: replay_buffer = replay_buffer[-FLAGS.replay_buffer_size:]
         obs = new_obs
       # 2) train with replay buffer
       trainset = random.choices(replay_buffer, k = 100)
