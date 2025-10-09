@@ -138,13 +138,13 @@ class DiscreteQ(nn.Module):
     # states.shape = (batch, stack_length, h, w) actions.shape = (batch,)
     encoding = self.encoding(states)
     action = F.one_hot(actions, self.action_num) # action.shape = (batch, action_num)
-    sa = torch.cat([encoding, action], dim = -1) # sa.shape = (batch, state_dim + action_num)
+    sa = torch.cat([encoding, action], dim = -1) # sa.shape = (batch, hidden_dim + action_num)
     q1 = self.q1_head(sa)
     q2 = self.q2_head(sa)
     return q1, q2
 
 class Value(nn.Module):
-  def __init__(self, state_dim, hidden_dim = 256, stack_length = 4):
+  def __init__(self, hidden_dim = 256, stack_length = 4):
     super(Value, self).__init__()
     self.encoding = nn.Sequential(
       nn.Conv2d(stack_length, hidden_dim, kernel_size = (3,3), stride = (2,2), padding = 1),
@@ -170,11 +170,11 @@ class Value(nn.Module):
     return values
 
 class SAC(nn.Module):
-  def __init__(self, state_dim, action_dim, hidden_dim = 256, stack_length = 4):
+  def __init__(self, action_dim, hidden_dim = 256, stack_length = 4):
     super(SAC, self).__init__()
-    self.policy = PolicyNet(state_dim, action_dim, hidden_dim, stack_length)
-    self.Q = Q(state_dim, action_dim, hidden_dim, stack_length)
-    self.V = Value(state_dim, hidden_dim, stack_length)
+    self.policy = PolicyNet(action_dim, hidden_dim, stack_length)
+    self.Q = Q(action_dim, hidden_dim, stack_length)
+    self.V = Value(hidden_dim, stack_length)
   def act(self, states):
     actions, log_probs = self.policy.sample(states) # action.shape = (batch, action_dim) log_prob = (batch, 1)
     return actions.detach(), log_probs.detach()
@@ -193,11 +193,11 @@ class SAC(nn.Module):
     return vs.detach()
 
 class DiscreteSAC(nn.Module):
-  def __init__(self, state_dim, action_num, hidden_dim = 256, stack_length = 4):
+  def __init__(self, action_num, hidden_dim = 256, stack_length = 4):
     super(DiscreteSAC, self).__init__()
-    self.policy = DiscretePolicyNet(state_dim, action_num, hidden_dim, stack_length)
-    self.Q = DiscreteQ(state_dim, action_num, hidden_dim, stack_length)
-    self.V = Value(state_dim, hidden_dim, stack_length)
+    self.policy = DiscretePolicyNet(action_num, hidden_dim, stack_length)
+    self.Q = DiscreteQ(action_num, hidden_dim, stack_length)
+    self.V = Value(hidden_dim, stack_length)
   def act(self, x):
     action, log_prob = self.policy.sample(x) # action.shape = (batch,) log_prob = (batch, 1)
     return action.detach(), log_prob.detach()
