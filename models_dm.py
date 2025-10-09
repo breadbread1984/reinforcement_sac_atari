@@ -175,7 +175,7 @@ class Value(nn.Module):
     )
   def forward(self, states):
     encoding = self.encoding(states)
-    values = self.value_head(encoding)
+    values = self.value_head(encoding) # values.shape = (batch, 1)
     return values
 
 class SAC(nn.Module):
@@ -199,7 +199,7 @@ class SAC(nn.Module):
   def get_qs(self, new_states, rewards, dones, gamma):
     # new_states.shape = (batch, stack_length, h, w) rewards.shape = (batch) dones.shape = (batch)
     vs = rewards + gamma * torch.where(dones > 0.5, torch.zeros_like(rewards), torch.ones_like(rewards)) * self.V(new_states)
-    return vs.detach()
+    return vs.detach() # shape = (batch, 1)
   def logprobs(self, states, actions):
     return self.policy.logprobs(states, actions)
 
@@ -217,7 +217,7 @@ class DiscreteSAC(nn.Module):
   def get_values(self, states, actions, log_probs, alpha = 0.1):
     # states.shape = (batch, stack_length, h, w) actions.shape = (batch,) log_probs = (batch, 1)
     q1, q2 = self.Q(states, actions) # q1.shape = (batch, 1) q2.shape = (batch, 1)
-    vs = torch.minimum(q1, q2) - alpha * log_probs
+    vs = torch.minimum(q1, q2) - alpha * log_probs # vs.shape = (batch, 1)
     return vs.detach()
   def pred_qs(self, states, actions):
     return self.Q(states, actions)

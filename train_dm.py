@@ -85,12 +85,13 @@ def main(unused_argv):
         dones = torch.from_numpy(d).to(next(sac.parameters()).device)
 
         logprobs = sac.logprobs(states, actions)
-        pred_q1, pred_q2 = sac.pred_qs(states, actions)
-        true_q = sac.get_qs(new_states, rewards, dones, FLAGS.gamma)
-        pred_v = sac.pred_values(states)
-        true_v = sac.get_values(states, actions, logprobs)
+        pred_q1, pred_q2 = sac.pred_qs(states, actions) # pred_q1.shape = (batch, 1) pred_q2.shape = (batch, 1)
+        true_q = sac.get_qs(new_states, rewards, dones, FLAGS.gamma) # true_q.shape = (batch, 1)
+        pred_v = sac.pred_values(states) # pred_v.shape = (batch, 1)
+        true_v = sac.get_values(states, actions, logprobs) # true_v.shape = (batch, 1)
 
         loss = - (torch.minimum(pred_q1, pred_q2) - 0.1 * logprobs) + 0.5 * (criterion(pred_q1, true_q) + criterion(pred_q2, true_q)) + criterion(pred_v, true_v)
+        loss = loss.mean()
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
