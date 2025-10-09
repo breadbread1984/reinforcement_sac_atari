@@ -71,7 +71,7 @@ def main(unused_argv):
         actions = actions.cpu().numpy()
         new_obs, rewards, terminates, truncates, infos = envs.step(actions)
         new_obs = np.stack([preprocess(ob) for ob in new_obs], axis = 0).astype(np.float32)
-        replay_buffer.append((obs, actions, new_obs, rewards, terminates))
+        replay_buffer.append((obs, actions, new_obs, rewards.astype(np.float32), terminates))
         if len(replay_buffer) > 1000000: replay_buffer = replay_buffer[-1000000:]
         obs = new_obs
       # 2) train with replay buffer
