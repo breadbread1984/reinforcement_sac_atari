@@ -12,7 +12,6 @@ class ReplayBuffer(object):
   def add(self, sample):
     with self.db.begin(write = True) as txn:
       txn.put(str(uuid4()).encode(), zlib.compress(pickle.dumps(sample)))
-    self.latest_id += 1
   def keys(self):
     with self.db.begin() as txn:
       keys = [key for key, _ in txn.cursor()]
