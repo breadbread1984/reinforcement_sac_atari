@@ -2,6 +2,7 @@
 
 import random
 import pickle
+import zlib
 import lmdb
 
 class ReplayBuffer(object):
@@ -10,7 +11,7 @@ class ReplayBuffer(object):
     self.latest_id = 0
   def add(self, sample):
     with self.db.begin(write = True) as txn:
-      txn.put(str(self.latest_id).zfill(5).encode(), pickle.dumps(sample))
+      txn.put(str(self.latest_id).zfill(5).encode(), zlib.compress(pickle.dumps(sample)))
     self.latest_id += 1
   def keys(self):
     with self.db.begin() as txn:
@@ -26,7 +27,7 @@ class ReplayBuffer(object):
     with self.db.begin() as txn:
       for key in sampled:
         data = txn.get(key)
-        sample = pickle.loads(data)
+        sample = pickle.loads(zlib.decompress(data))
         dataset.append(sample)
     return dataset
   def truncate(self, size = 10000):
