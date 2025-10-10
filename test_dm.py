@@ -49,7 +49,8 @@ def main(unused_argv):
     cv2.imshow('display', frame)
     cv2.waitKey(40)
     obs = torch.from_numpy(np.stack([preprocess(obs)], axis = 0).astype(np.float32)).to(next(ppo.parameters()).device)
-    actions = sac.act(obs)
+    with torch.no_grad():
+      actions = sac.act(obs)
     actions = actions.cpu().numpy()
     obs, reward, terminate, truncate, info = env.step(actions[0])
   env.close()
