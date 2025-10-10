@@ -12,7 +12,7 @@ import cv2
 import matplotlib.pyplot as plt
 import torch
 from torch import nn
-from models_dm import SAC
+from models_dm import DiscreteSAC
 
 FLAGS = flags.FLAGS
 
