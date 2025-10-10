@@ -77,7 +77,7 @@ def main(unused_argv):
         if len(replay_buffer) > FLAGS.replay_buffer_size: replay_buffer = replay_buffer[-FLAGS.replay_buffer_size:]
         obs = new_obs
       # 2) train with replay buffer
-      trainset = random.choices(replay_buffer, k = 1000)
+      trainset = random.choices(replay_buffer, k = 100)
       train_pbar = tqdm(trainset, desc = "train", leave = False)
       for o, a, no, r, d in train_pbar:
         states = torch.from_numpy(o).to(next(sac.parameters()).device)
