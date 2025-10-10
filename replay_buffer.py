@@ -29,7 +29,7 @@ class ReplayBuffer(object):
         sample = pickle.loads(zlib.decompress(data))
         dataset.append(sample)
     return dataset
-  def truncate(self, size = 10000):
+  def truncate(self, size = 500000):
     if self.size() <= size: return
     keys = random.shuffle(self.keys())
     to_delete = keys[:-size]
