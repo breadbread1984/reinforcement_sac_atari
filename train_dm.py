@@ -30,7 +30,7 @@ def add_options():
   flags.DEFINE_integer('steps', default = 10000, help = 'number of steps per epoch')
   flags.DEFINE_integer('batch', default = 32, help = 'number of trajectories collected parallely')
   flags.DEFINE_integer('traj_length', default = 256, help = 'maximum length of a trajectory')
-  flags.DEFINE_integer('epochs', default = 300, help = 'number of epoch')
+  flags.DEFINE_integer('epochs', default = 3000, help = 'number of epoch')
   flags.DEFINE_integer('replay_buffer_size', default = 10000, help = 'replay buffer size')
   flags.DEFINE_float('gamma', default = 0.95, help = 'gamma value')
   flags.DEFINE_float('alpha', default = 0.1, help = 'alpha value')
@@ -76,7 +76,7 @@ def main(unused_argv):
       obs = new_obs
       rollout_pbar.set_postfix(replay_buffer_size = replay_buffer.size())
     # 2) train with replay buffer
-    trainset = replay_buffer.sample(1000)
+    trainset = replay_buffer.sample(200)
     train_pbar = tqdm(trainset, desc = "train", leave = False)
     for o, a, no, r, d in train_pbar:
       states = torch.from_numpy(o).to(next(sac.parameters()).device)
