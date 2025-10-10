@@ -13,5 +13,11 @@ python3 -m pip install -r requirements.txt
 ## Training with customized deep learning model
 
 ```shell
-python3 train_dm.py
+python3 train_dm.py --device (cuda|cpu)
+```
+
+## Testing with customized deep learning model
+
+```shell
+python3 test_dm.py --ckpt <path/to/ckpt> --device (cuda|cpu)
 ```
