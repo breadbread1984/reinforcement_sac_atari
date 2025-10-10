@@ -83,7 +83,7 @@ def main(unused_argv):
       obs = new_obs
       rollout_pbar.set_postfix(replay_buffer_size = replay_buffer.size())
     # 2) train with replay buffer
-    trainset = replay_buffer.sample(1000)
+    trainset = replay_buffer.sample(400)
     train_pbar = tqdm(trainset, desc = "train", leave = False)
     for o, a, no, r, d in train_pbar:
       states = torch.from_numpy(o).to(next(sac.parameters()).device)
