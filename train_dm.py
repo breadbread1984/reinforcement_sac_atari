@@ -98,8 +98,7 @@ def main(unused_argv):
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        train_pbar.set_postfix(loss = loss.detach().cpu().numpy())
-        train_pbar.set_postfix(replay_buffer_size = replay_buffer.size())
+        train_pbar.set_postfix(loss = loss.detach().cpu().numpy(), replay_buffer_size = replay_buffer.size())
         tb_writer.add_scalar('loss', loss.detach().cpu().numpy(), global_steps)
         global_steps += 1
     scheduler.step()
