@@ -67,14 +67,14 @@ def main(unused_argv):
       obs = np.stack([preprocess(ob) for ob in obs], axis = 0).astype(np.float32)
       # 1) sample 256 steps from a trajectory
       rollout_pbar = tqdm(range(FLAGS.traj_length), desc = "rollout", leave = False)
-      for _ in rollout_pbar:
+      for rollout_step in rollout_pbar:
         inputs = torch.from_numpy(obs).to(next(sac.parameters()).device)
         actions = sac.act(inputs) # actions.shape = (batch,)
         actions = actions.cpu().numpy()
         new_obs, rewards, terminates, truncates, infos = envs.step(actions)
         new_obs = np.stack([preprocess(ob) for ob in new_obs], axis = 0).astype(np.float32)
         replay_buffer.add((obs, actions, new_obs, rewards.astype(np.float32), terminates))
-        replay_buffer.truncate(FLAGS.replay_buffer_size)
+        if rollout_step % 50 == 0: replay_buffer.truncate(FLAGS.replay_buffer_size)
         obs = new_obs
         rollout_pbar.set_postfix(replay_buffer_size = replay_buffer.size())
       # 2) train with replay buffer
