@@ -33,7 +33,7 @@ def main(unused_argv):
     'box': 'ALE/Boxing-v5'
   }[FLAGS.game]
   env = FrameStackObservation(GrayscaleObservation(gym.make(env_id, render_mode='rgb_array')), FLAGS.stack_length)
-  sac = DiscreteSAC(action_num = envs.single_action_space.n, stack_length = FLAGS.stack_length).to(FLAGS.device)
+  sac = DiscreteSAC(action_num = env.action_space.n, stack_length = FLAGS.stack_length).to(FLAGS.device)
   with torch.serialization.safe_globals([
     torch.optim.lr_scheduler.CosineAnnealingWarmRestarts,
     torch.optim.Adam,
