@@ -17,6 +17,7 @@ from torch.optim import Adam
 from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 from torch.utils.tensorboard import SummaryWriter
 from models_dm import DiscreteSAC
+from replay_buffer import ReplayBuffer
 
 FLAGS = flags.FLAGS
 
@@ -52,14 +53,13 @@ def main(unused_argv):
   scheduler = CosineAnnealingWarmRestarts(optimizer, T_0 = 5, T_mult = 2)
   tb_writer = SummaryWriter(log_dir = FLAGS.logdir)
   global_steps = 0
-  replay_buffer = list()
+  replay_buffer = ReplayBuffer()
   if exists(FLAGS.ckpt):
     ckpt = torch.load(FLAGS.ckpt)
     global_steps = ckpt['global_steps']
     sac.load_state_dict(ckpt['state_dict'])
     optimizer.load_state_dict(ckpt['optimizer'])
     scheduler = ckpt['scheduler']
-    replay_buffer = ckpt['replay_buffer']
   for epoch in tqdm(range(FLAGS.epochs), desc = "epoch"):
     step_pbar = tqdm(range(FLAGS.steps), desc = "step", leave = False)
     for step in step_pbar:
@@ -73,12 +73,12 @@ def main(unused_argv):
         actions = actions.cpu().numpy()
         new_obs, rewards, terminates, truncates, infos = envs.step(actions)
         new_obs = np.stack([preprocess(ob) for ob in new_obs], axis = 0).astype(np.float32)
-        replay_buffer.append((obs, actions, new_obs, rewards.astype(np.float32), terminates))
-        if len(replay_buffer) > FLAGS.replay_buffer_size: replay_buffer = replay_buffer[-FLAGS.replay_buffer_size:]
+        replay_buffer.add((obs, actions, new_obs, rewards.astype(np.float32), terminates))
+        replay_buffer.truncate(FLAGS.replay_buffer_size)
         obs = new_obs
-        rollout_pbar.set_postfix(replay_buffer_size = len(replay_buffer))
+        rollout_pbar.set_postfix(replay_buffer_size = replay_buffer.size())
       # 2) train with replay buffer
-      trainset = random.choices(replay_buffer, k = 100)
+      trainset = replay_buffer.sample(100)
       train_pbar = tqdm(trainset, desc = "train", leave = False)
       for o, a, no, r, d in train_pbar:
         states = torch.from_numpy(o).to(next(sac.parameters()).device)
@@ -99,7 +99,7 @@ def main(unused_argv):
         loss.backward()
         optimizer.step()
         train_pbar.set_postfix(loss = loss.detach().cpu().numpy())
-        train_pbar.set_postfix(replay_buffer_size = len(replay_buffer))
+        train_pbar.set_postfix(replay_buffer_size = replay_buffer.size())
         tb_writer.add_scalar('loss', loss.detach().cpu().numpy(), global_steps)
         global_steps += 1
     scheduler.step()
