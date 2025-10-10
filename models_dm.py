@@ -199,6 +199,7 @@ class SAC(nn.Module):
   def get_qs(self, new_states, rewards, dones, gamma):
     # new_states.shape = (batch, stack_length, h, w) rewards.shape = (batch) dones.shape = (batch)
     rewards = torch.unsqueeze(rewards, dim = -1) # rewards.shape = (batch, 1)
+    dones = torch.unsqueeze(dones, dim = -1) # dones.shape = (batch, 1)
     vs = rewards + gamma * torch.where(dones > 0.5, torch.zeros_like(rewards, dtype = torch.float32), torch.ones_like(rewards, dtype = torch.float32)) * self.V(new_states)
     return vs.detach() # shape = (batch, 1)
   def logprobs(self, states, actions):
@@ -225,6 +226,7 @@ class DiscreteSAC(nn.Module):
   def get_qs(self, new_states, rewards, dones, gamma):
     # new_states.shape = (batch, stack_length, h, w) rewrads.shape = (batch,) dones.shape = (batch)
     rewards = torch.unsqueeze(rewards, dim = -1) # rewards.shape = (batch, 1)
+    dones = torch.unsqueeze(dones, dim = -1) # dones.shape = (batch, 1)
     vs = rewards + gamma * torch.where(dones > 0.5, torch.zeros_like(rewards, dtype = torch.float32), torch.ones_like(rewards, dtype = torch.float32)) * self.V(new_states)
     return vs.detach()
   def logprobs(self, states, actions):
