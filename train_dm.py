@@ -76,6 +76,7 @@ def main(unused_argv):
         replay_buffer.append((obs, actions, new_obs, rewards.astype(np.float32), terminates))
         if len(replay_buffer) > FLAGS.replay_buffer_size: replay_buffer = replay_buffer[-FLAGS.replay_buffer_size:]
         obs = new_obs
+        rollout_pbar.set_postfix(replay_buffer_size = len(replay_buffer))
       # 2) train with replay buffer
       trainset = random.choices(replay_buffer, k = 100)
       train_pbar = tqdm(trainset, desc = "train", leave = False)
@@ -98,6 +99,7 @@ def main(unused_argv):
         loss.backward()
         optimizer.step()
         train_pbar.set_postfix(loss = loss.detach().cpu().numpy())
+        train_pbar.set_postfix(replay_buffer_size = len(replay_buffer))
         tb_writer.add_scalar('loss', loss.detach().cpu().numpy(), global_steps)
         global_steps += 1
     scheduler.step()
