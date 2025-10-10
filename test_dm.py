@@ -40,7 +40,7 @@ def main(unused_argv):
     collections.defaultdict,
     dict
   ]):
-    ckpt = torch.load(FLAGS.ckpt)
+    ckpt = torch.load(FLAGS.ckpt, map_location = torch.device(FLAGS.device))
   sac.load_state_dict(ckpt['state_dict'])
   obs, info = env.reset()
   done = False
