@@ -4,14 +4,14 @@ import random
 import pickle
 import zlib
 import lmdb
+from uuid import uuid4
 
 class ReplayBuffer(object):
   def __init__(self, file_path = 'replay_buffer.lmdb'):
     self.db = lmdb.open(file_path, map_size = 1099511627776)
-    self.latest_id = 0
   def add(self, sample):
     with self.db.begin(write = True) as txn:
-      txn.put(str(self.latest_id).zfill(5).encode(), zlib.compress(pickle.dumps(sample)))
+      txn.put(str(uuid4()).encode(), zlib.compress(pickle.dumps(sample)))
     self.latest_id += 1
   def keys(self):
     with self.db.begin() as txn:
@@ -32,7 +32,7 @@ class ReplayBuffer(object):
     return dataset
   def truncate(self, size = 10000):
     if self.size() <= size: return
-    keys = list(sorted(self.keys()))
+    keys = random.shuffle(self.keys())
     to_delete = keys[:-size]
     with self.db.begin(write = True) as txn:
       for key in to_delete:
