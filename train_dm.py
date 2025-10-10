@@ -32,6 +32,7 @@ def add_options():
   flags.DEFINE_integer('epochs', default = 300, help = 'number of epoch')
   flags.DEFINE_integer('replay_buffer_size', default = 10000, help = 'replay buffer size')
   flags.DEFINE_float('gamma', default = 0.95, help = 'gamma value')
+  flags.DEFINE_float('alpha', default = 0.1, help = 'alpha value')
   flags.DEFINE_enum('device', default = 'cuda', enum_values = {'cpu', 'cuda'}, help = 'device to use')
 
 def preprocess(img):
@@ -76,7 +77,7 @@ def main(unused_argv):
         if len(replay_buffer) > FLAGS.replay_buffer_size: replay_buffer = replay_buffer[-FLAGS.replay_buffer_size:]
         obs = new_obs
       # 2) train with replay buffer
-      trainset = random.choices(replay_buffer, k = 100)
+      trainset = random.choices(replay_buffer, k = 1000)
       train_pbar = tqdm(trainset, desc = "train", leave = False)
       for o, a, no, r, d in train_pbar:
         states = torch.from_numpy(o).to(next(sac.parameters()).device)
@@ -89,9 +90,9 @@ def main(unused_argv):
         pred_q1, pred_q2 = sac.pred_qs(states, actions) # pred_q1.shape = (batch, 1) pred_q2.shape = (batch, 1)
         true_q = sac.get_qs(new_states, rewards, dones, FLAGS.gamma) # true_q.shape = (batch, 1)
         pred_v = sac.pred_values(states) # pred_v.shape = (batch, 1)
-        true_v = sac.get_values(states, actions, logprobs) # true_v.shape = (batch, 1)
+        true_v = sac.get_values(states, actions, logprobs, alpha = FLAGS.alpha) # true_v.shape = (batch, 1)
 
-        loss = - (torch.minimum(pred_q1, pred_q2) - 0.1 * logprobs) + 0.5 * (criterion(pred_q1, true_q) + criterion(pred_q2, true_q)) + criterion(pred_v, true_v)
+        loss = - (torch.minimum(pred_q1, pred_q2) - FLAGS.alpha * logprobs) + 0.5 * (criterion(pred_q1, true_q) + criterion(pred_q2, true_q)) + criterion(pred_v, true_v)
         loss = loss.mean()
         optimizer.zero_grad()
         loss.backward()
