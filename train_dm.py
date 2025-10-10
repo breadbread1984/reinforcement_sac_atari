@@ -61,46 +61,44 @@ def main(unused_argv):
     optimizer.load_state_dict(ckpt['optimizer'])
     scheduler = ckpt['scheduler']
   for epoch in tqdm(range(FLAGS.epochs), desc = "epoch"):
-    step_pbar = tqdm(range(FLAGS.steps), desc = "step", leave = False)
-    for step in step_pbar:
-      obs, info = envs.reset()
-      obs = np.stack([preprocess(ob) for ob in obs], axis = 0).astype(np.float32)
-      # 1) sample 256 steps from a trajectory
-      rollout_pbar = tqdm(range(FLAGS.traj_length), desc = "rollout", leave = False)
-      for rollout_step in rollout_pbar:
-        inputs = torch.from_numpy(obs).to(next(sac.parameters()).device)
-        actions = sac.act(inputs) # actions.shape = (batch,)
-        actions = actions.cpu().numpy()
-        new_obs, rewards, terminates, truncates, infos = envs.step(actions)
-        new_obs = np.stack([preprocess(ob) for ob in new_obs], axis = 0).astype(np.float32)
-        replay_buffer.add((obs, actions, new_obs, rewards.astype(np.float32), terminates))
-        if rollout_step % 50 == 0: replay_buffer.truncate(FLAGS.replay_buffer_size)
-        obs = new_obs
-        rollout_pbar.set_postfix(replay_buffer_size = replay_buffer.size())
-      # 2) train with replay buffer
-      trainset = replay_buffer.sample(100)
-      train_pbar = tqdm(trainset, desc = "train", leave = False)
-      for o, a, no, r, d in train_pbar:
-        states = torch.from_numpy(o).to(next(sac.parameters()).device)
-        actions = torch.from_numpy(a).to(next(sac.parameters()).device)
-        new_states = torch.from_numpy(no).to(next(sac.parameters()).device)
-        rewards = torch.from_numpy(r).to(next(sac.parameters()).device)
-        dones = torch.from_numpy(d).to(next(sac.parameters()).device)
+    obs, info = envs.reset()
+    obs = np.stack([preprocess(ob) for ob in obs], axis = 0).astype(np.float32)
+    # 1) sample 256 steps from a trajectory
+    rollout_pbar = tqdm(range(FLAGS.traj_length), desc = "rollout", leave = False)
+    for rollout_step in rollout_pbar:
+      inputs = torch.from_numpy(obs).to(next(sac.parameters()).device)
+      actions = sac.act(inputs) # actions.shape = (batch,)
+      actions = actions.cpu().numpy()
+      new_obs, rewards, terminates, truncates, infos = envs.step(actions)
+      new_obs = np.stack([preprocess(ob) for ob in new_obs], axis = 0).astype(np.float32)
+      replay_buffer.add((obs, actions, new_obs, rewards.astype(np.float32), terminates))
+      if rollout_step % 50 == 0: replay_buffer.truncate(FLAGS.replay_buffer_size)
+      obs = new_obs
+      rollout_pbar.set_postfix(replay_buffer_size = replay_buffer.size())
+    # 2) train with replay buffer
+    trainset = replay_buffer.sample(1000)
+    train_pbar = tqdm(trainset, desc = "train", leave = False)
+    for o, a, no, r, d in train_pbar:
+      states = torch.from_numpy(o).to(next(sac.parameters()).device)
+      actions = torch.from_numpy(a).to(next(sac.parameters()).device)
+      new_states = torch.from_numpy(no).to(next(sac.parameters()).device)
+      rewards = torch.from_numpy(r).to(next(sac.parameters()).device)
+      dones = torch.from_numpy(d).to(next(sac.parameters()).device)
 
-        logprobs = sac.logprobs(states, actions)
-        pred_q1, pred_q2 = sac.pred_qs(states, actions) # pred_q1.shape = (batch, 1) pred_q2.shape = (batch, 1)
-        true_q = sac.get_qs(new_states, rewards, dones, FLAGS.gamma) # true_q.shape = (batch, 1)
-        pred_v = sac.pred_values(states) # pred_v.shape = (batch, 1)
-        true_v = sac.get_values(states, actions, logprobs, alpha = FLAGS.alpha) # true_v.shape = (batch, 1)
+      logprobs = sac.logprobs(states, actions)
+      pred_q1, pred_q2 = sac.pred_qs(states, actions) # pred_q1.shape = (batch, 1) pred_q2.shape = (batch, 1)
+      true_q = sac.get_qs(new_states, rewards, dones, FLAGS.gamma) # true_q.shape = (batch, 1)
+      pred_v = sac.pred_values(states) # pred_v.shape = (batch, 1)
+      true_v = sac.get_values(states, actions, logprobs, alpha = FLAGS.alpha) # true_v.shape = (batch, 1)
 
-        loss = - (torch.minimum(pred_q1, pred_q2) - FLAGS.alpha * logprobs) + 0.5 * (criterion(pred_q1, true_q) + criterion(pred_q2, true_q)) + criterion(pred_v, true_v)
-        loss = loss.mean()
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-        train_pbar.set_postfix(loss = loss.detach().cpu().numpy(), replay_buffer_size = replay_buffer.size())
-        tb_writer.add_scalar('loss', loss.detach().cpu().numpy(), global_steps)
-        global_steps += 1
+      loss = - (torch.minimum(pred_q1, pred_q2) - FLAGS.alpha * logprobs) + 0.5 * (criterion(pred_q1, true_q) + criterion(pred_q2, true_q)) + criterion(pred_v, true_v)
+      loss = loss.mean()
+      optimizer.zero_grad()
+      loss.backward()
+      optimizer.step()
+      train_pbar.set_postfix(loss = loss.detach().cpu().numpy(), replay_buffer_size = replay_buffer.size())
+      tb_writer.add_scalar('loss', loss.detach().cpu().numpy(), global_steps)
+      global_steps += 1
     scheduler.step()
     ckpt = {
       'global_steps': global_steps,
