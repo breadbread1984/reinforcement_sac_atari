@@ -1,6 +1,8 @@
 #!/usr/bin/python3
 
 from absl import flags, app
+import gymnasium as gym
+import ale_py
 from stable_baselines3 import SAC
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.callbacks import CheckpointCallback, EvalCallback
@@ -22,6 +24,7 @@ def add_options():
   flags.DEFINE_integer('stack_length', default = 4, help = 'length of the stack')
 
 def main(unused_argv):
+  gym.register_envs(ale_py)
   env_id = {
     'box': 'ALE/Boxing-v5'
   }[FLAGS.game]
