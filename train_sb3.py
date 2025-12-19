@@ -5,6 +5,7 @@ from stable_baselines3 import SAC
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.callbacks import CheckpointCallback, EvalCallback
 from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.vec_env import VecFrameStack
 from stable_baselines3.her import HerReplayBuffer, GoalSelectionStrategy
 
 FLAGS = flags.FLAGS
