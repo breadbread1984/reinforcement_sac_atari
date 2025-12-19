@@ -20,7 +20,6 @@ def add_options():
   flags.DEFINE_integer('stack_length', default = 4, help = 'length of the stack')
 
 def main(unused_argv):
-  gym.register_envs(ale_py)
   env_id = {
     'box': 'ALE/Boxing-v5'
   }[FLAGS.game]
